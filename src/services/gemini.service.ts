@@ -3,28 +3,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-let aiClient: GoogleGenAI;
-
-if (process.env.GCP_SERVICE_ACCOUNT_JSON) {
-  try {
-    const credentials = JSON.parse(process.env.GCP_SERVICE_ACCOUNT_JSON);
-    aiClient = new GoogleGenAI({
-      vertexai: true,
-      project: credentials.project_id || 'rznies2',
-      location: process.env.GCP_LOCATION || 'us-central1',
-      googleAuthOptions: { credentials }
-    });
-  } catch (err) {
-    console.error('Failed to parse GCP_SERVICE_ACCOUNT_JSON, falling back to API key:', err);
-    aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || 'DUMMY_KEY' });
-  }
-} else {
-  aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || 'DUMMY_KEY' });
-}
-
-export const ai = aiClient;
-
-const modelName = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
+// The new SDK automatically resolves GEMINI_API_KEY from env, but we provide fallback to avoid crash during setup/tests if unset.
+export const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || 'DUMMY_KEY' });
 
 export async function classifyIntent(message: string): Promise<'query' | 'booking' | 'followup-cancel' | 'other'> {
   if (!message || !message.trim()) {
@@ -33,7 +13,7 @@ export async function classifyIntent(message: string): Promise<'query' | 'bookin
   
   try {
     const response = await ai.models.generateContent({
-      model: modelName,
+      model: 'gemini-3.1-flash-lite-preview',
       contents: `Classify the user intent from this message into one of the following: 'query', 'booking', 'followup-cancel', 'other'.
 Message: "${message}"
 Response must be only the intent word.`,
@@ -62,7 +42,7 @@ export async function generateResponse(
     ];
     
     const response = await ai.models.generateContent({
-      model: modelName,
+      model: 'gemini-3.1-flash-lite-preview',
       config: {
         systemInstruction: systemPrompt,
       },
