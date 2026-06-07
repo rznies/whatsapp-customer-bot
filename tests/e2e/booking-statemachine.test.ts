@@ -198,6 +198,7 @@ describe('F5: Booking State Machine E2E', () => {
     expect(bookingRes.rows[0].customer_name).toBe('Jane Smith');
     expect(bookingRes.rows[0].service).toBe('Haircut');
     expect(bookingRes.rows[0].status).toBe('confirmed');
+    expect(bookingRes.rows[0].conversation_id).toBe('770e8400-e29b-41d4-a716-446655440004');
 
     // Assert follow-up scheduled
     const followupRes = await pool.query('SELECT * FROM follow_ups WHERE booking_id = $1', [bookingRes.rows[0].id]);

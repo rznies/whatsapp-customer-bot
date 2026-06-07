@@ -60,9 +60,9 @@ describe('F8: Dashboard API & Takeover E2E', () => {
     const bookingId = '880e8400-e29b-41d4-a716-446655440022';
     const bookingDate = new Date(); // today
     await pool.query(
-      `INSERT INTO bookings (id, client_id, customer_name, service, date, status)
-       VALUES ($1, $2, $3, $4, $5, 'confirmed')`,
-      [bookingId, CLIENT.id, 'Alice', 'Haircut', bookingDate]
+      `INSERT INTO bookings (id, client_id, customer_name, service, date, status, conversation_id)
+       VALUES ($1, $2, $3, $4, $5, 'confirmed', $6)`,
+      [bookingId, CLIENT.id, 'Alice', 'Haircut', bookingDate, convId]
     );
 
     // Insert pending followup
@@ -104,10 +104,16 @@ describe('F8: Dashboard API & Takeover E2E', () => {
     );
 
     const bookingId = '880e8400-e29b-41d4-a716-446655440022';
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const bookingDate = new Date(`${yyyy}-${mm}-${dd}T12:00:00.000Z`);
+
     await pool.query(
-      `INSERT INTO bookings (id, client_id, customer_name, service, date, status)
-       VALUES ($1, $2, $3, $4, $5, 'confirmed')`,
-      [bookingId, CLIENT.id, 'Alice', 'Haircut', new Date()]
+      `INSERT INTO bookings (id, client_id, customer_name, service, date, status, conversation_id)
+       VALUES ($1, $2, $3, $4, $5, 'confirmed', $6)`,
+      [bookingId, CLIENT.id, 'Alice', 'Haircut', bookingDate, convId]
     );
 
     const followupId = '550e8400-e29b-41d4-a716-446655449999';
@@ -165,9 +171,9 @@ describe('F8: Dashboard API & Takeover E2E', () => {
 
     const bookingId = '880e8400-e29b-41d4-a716-446655440022';
     await pool.query(
-      `INSERT INTO bookings (id, client_id, customer_name, service, date, status)
-       VALUES ($1, $2, $3, $4, $5, 'confirmed')`,
-      [bookingId, CLIENT.id, 'Alice', 'Haircut', new Date()]
+      `INSERT INTO bookings (id, client_id, customer_name, service, date, status, conversation_id)
+       VALUES ($1, $2, $3, $4, $5, 'confirmed', $6)`,
+      [bookingId, CLIENT.id, 'Alice', 'Haircut', new Date(), convId]
     );
 
     const followupId = '550e8400-e29b-41d4-a716-446655449999';

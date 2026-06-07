@@ -13,9 +13,10 @@ export async function runFollowupJob(): Promise<void> {
   try {
     const res = await pool.query(`
       SELECT f.id AS followup_id, f.booking_id, f.scheduled_time, f.sent,
-             b.customer_name, b.service, b.client_id
+             b.customer_name, b.service, b.client_id, c.customer_phone_number
       FROM follow_ups f
       JOIN bookings b ON f.booking_id = b.id
+      JOIN conversations c ON b.conversation_id = c.id
       WHERE f.sent = false AND f.scheduled_time <= NOW()
       LIMIT 50
     `);
@@ -28,12 +29,7 @@ export async function runFollowupJob(): Promise<void> {
       }
       const client = clientRes.rows[0];
 
-      // Fetch conversations for client and find the matching session by ID suffix
-      const convsRes = await pool.query('SELECT id, customer_phone_number FROM conversations WHERE client_id = $1', [row.client_id]);
-      const bookingSuffix = row.booking_id.substring(8);
-      const matchedConv = convsRes.rows.find((c: any) => c.id.substring(8) === bookingSuffix);
-      
-      const toPhone = matchedConv ? matchedConv.customer_phone_number : null;
+      const toPhone = row.customer_phone_number;
       if (!toPhone) {
         continue;
       }

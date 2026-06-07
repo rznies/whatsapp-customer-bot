@@ -170,9 +170,9 @@ describe('Tier 3: Pairwise Cross-Feature Combinations', () => {
     );
 
     await pool.query(
-      `INSERT INTO bookings (id, client_id, customer_name, service, date, status)
-       VALUES ($1, $2, $3, $4, NOW(), 'confirmed')`,
-      [bookingId, client.id, 'Alice', 'Haircut']
+      `INSERT INTO bookings (id, client_id, customer_name, service, date, status, conversation_id)
+       VALUES ($1, $2, $3, $4, NOW(), 'confirmed', $5)`,
+      [bookingId, client.id, 'Alice', 'Haircut', '770e8400-e29b-41d4-a716-446655440003']
     );
 
     await pool.query(
@@ -358,17 +358,17 @@ describe('Tier 3: Pairwise Cross-Feature Combinations', () => {
     const bookingBId = '880e8400-e29b-41d4-a716-44665544007b';
 
     await pool.query(
-      `INSERT INTO bookings (id, client_id, customer_name, service, date, status)
-       VALUES ($1, $2, 'Alice', 'Haircut', NOW(), 'confirmed'),
-              ($3, $4, 'Bob', 'Oil Change', NOW(), 'confirmed')`,
-      [bookingAId, clientA.id, bookingBId, clientB.id]
-    );
-
-    await pool.query(
       `INSERT INTO conversations (id, customer_phone_number, client_id, current_state, partial_booking_data, last_messaged_at)
        VALUES ('770e8400-e29b-41d4-a716-44665544007a', '+12025550701', $1, 'idle', '{}', NOW()),
               ('770e8400-e29b-41d4-a716-44665544007b', '+12025550702', $2, 'idle', '{}', NOW())`,
       [clientA.id, clientB.id]
+    );
+
+    await pool.query(
+      `INSERT INTO bookings (id, client_id, customer_name, service, date, status, conversation_id)
+       VALUES ($1, $2, 'Alice', 'Haircut', NOW(), 'confirmed', '770e8400-e29b-41d4-a716-44665544007a'),
+              ($3, $4, 'Bob', 'Oil Change', NOW(), 'confirmed', '770e8400-e29b-41d4-a716-44665544007b')`,
+      [bookingAId, clientA.id, bookingBId, clientB.id]
     );
 
     const expiredTime = new Date(Date.now() - 10 * 60 * 1000);

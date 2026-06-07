@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS bookings (
     customer_name VARCHAR(255) NOT NULL,
     service VARCHAR(255) NOT NULL,
     date TIMESTAMP WITH TIME ZONE NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'confirmed'
+    status VARCHAR(50) NOT NULL DEFAULT 'confirmed',
+    conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS follow_ups (

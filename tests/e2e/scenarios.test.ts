@@ -333,9 +333,9 @@ describe('Tier 4: Real-World Integration Scenarios', () => {
     );
 
     await pool.query(
-      `INSERT INTO bookings (id, client_id, customer_name, service, date, status)
-       VALUES ($1, $2, 'Alice', 'Haircut', NOW() + INTERVAL '24 hours', 'confirmed')`,
-      [bookingId, client.id]
+      `INSERT INTO bookings (id, client_id, customer_name, service, date, status, conversation_id)
+       VALUES ($1, $2, 'Alice', 'Haircut', NOW() + INTERVAL '24 hours', 'confirmed', $3)`,
+      [bookingId, client.id, '770e8400-e29b-41d4-a716-446655440004']
     );
 
     await pool.query(

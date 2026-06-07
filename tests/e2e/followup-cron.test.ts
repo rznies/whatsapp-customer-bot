@@ -45,19 +45,20 @@ describe('F6: Follow-up Cron Job E2E', () => {
   });
 
   test('TC-6.1.2: Expired Unsent Selection & TC-6.1.3: Message Dispatch Trigger & TC-6.1.4: Update Database Sent Status', async () => {
-    // 1. Create a booking for Client A (Meta)
-    const bookingId = '880e8400-e29b-41d4-a716-446655440001';
-    await pool.query(
-      `INSERT INTO bookings (id, client_id, customer_name, service, date, status)
-       VALUES ($1, $2, $3, $4, NOW(), 'confirmed')`,
-      [bookingId, CLIENT_A.id, 'Alice', 'Haircut']
-    );
-
-    // Create a conversation for the customer phone so follow-up can find it (wait, followup needs phone number, which is in conversations!)
+    // Create a conversation for the customer phone so follow-up can find it
+    const convId = '770e8400-e29b-41d4-a716-446655440001';
     await pool.query(
       `INSERT INTO conversations (id, customer_phone_number, client_id, current_state, partial_booking_data, last_messaged_at)
        VALUES ($1, $2, $3, 'idle', '{}', NOW())`,
-      ['770e8400-e29b-41d4-a716-446655440001', '+12025550199', CLIENT_A.id]
+      [convId, '+12025550199', CLIENT_A.id]
+    );
+
+    // 1. Create a booking for Client A (Meta)
+    const bookingId = '880e8400-e29b-41d4-a716-446655440001';
+    await pool.query(
+      `INSERT INTO bookings (id, client_id, customer_name, service, date, status, conversation_id)
+       VALUES ($1, $2, $3, $4, NOW(), 'confirmed', $5)`,
+      [bookingId, CLIENT_A.id, 'Alice', 'Haircut', convId]
     );
 
     // 2. Schedule follow-up in the past (-10 minutes)
@@ -87,17 +88,18 @@ describe('F6: Follow-up Cron Job E2E', () => {
   });
 
   test('TC-6.1.5: Ignore Future Scheduled Follow-ups', async () => {
-    const bookingId = '880e8400-e29b-41d4-a716-446655440002';
-    await pool.query(
-      `INSERT INTO bookings (id, client_id, customer_name, service, date, status)
-       VALUES ($1, $2, $3, $4, NOW(), 'confirmed')`,
-      [bookingId, CLIENT_A.id, 'Bob', 'Haircut']
-    );
-
+    const convId = '770e8400-e29b-41d4-a716-446655440002';
     await pool.query(
       `INSERT INTO conversations (id, customer_phone_number, client_id, current_state, partial_booking_data, last_messaged_at)
        VALUES ($1, $2, $3, 'idle', '{}', NOW())`,
-      ['770e8400-e29b-41d4-a716-446655440002', '+12025550299', CLIENT_A.id]
+      [convId, '+12025550299', CLIENT_A.id]
+    );
+
+    const bookingId = '880e8400-e29b-41d4-a716-446655440002';
+    await pool.query(
+      `INSERT INTO bookings (id, client_id, customer_name, service, date, status, conversation_id)
+       VALUES ($1, $2, $3, $4, NOW(), 'confirmed', $5)`,
+      [bookingId, CLIENT_A.id, 'Bob', 'Haircut', convId]
     );
 
     // Schedule follow-up in the future (+1 hour)
@@ -127,14 +129,14 @@ describe('F6: Follow-up Cron Job E2E', () => {
       const phone = `+1202555${i.toString().padStart(4, '0')}`;
 
       await pool.query(
-        `INSERT INTO bookings (id, client_id, customer_name, service, date, status)
-         VALUES ($1, $2, $3, 'Haircut', NOW(), 'confirmed')`,
-        [bId, CLIENT_A.id, `User${i}`]
-      );
-      await pool.query(
         `INSERT INTO conversations (id, customer_phone_number, client_id, current_state, partial_booking_data, last_messaged_at)
          VALUES ($1, $2, $3, 'idle', '{}', NOW())`,
         [cId, phone, CLIENT_A.id]
+      );
+      await pool.query(
+        `INSERT INTO bookings (id, client_id, customer_name, service, date, status, conversation_id)
+         VALUES ($1, $2, $3, 'Haircut', NOW(), 'confirmed', $4)`,
+        [bId, CLIENT_A.id, `User${i}`, cId]
       );
       await pool.query(
         `INSERT INTO follow_ups (id, booking_id, scheduled_time, sent)
@@ -170,15 +172,16 @@ describe('F6: Follow-up Cron Job E2E', () => {
     ];
 
     for (const d of details) {
-      await pool.query(
-        `INSERT INTO bookings (id, client_id, customer_name, service, date, status)
-         VALUES ($1, $2, 'TestUser', 'Haircut', NOW(), 'confirmed')`,
-        [d.b, CLIENT_A.id]
-      );
+      const cId = d.b.replace('880e', '770e');
       await pool.query(
         `INSERT INTO conversations (id, customer_phone_number, client_id, current_state, partial_booking_data, last_messaged_at)
          VALUES ($1, $2, $3, 'idle', '{}', NOW())`,
-        [d.b.replace('880e', '770e'), d.phone, CLIENT_A.id]
+        [cId, d.phone, CLIENT_A.id]
+      );
+      await pool.query(
+        `INSERT INTO bookings (id, client_id, customer_name, service, date, status, conversation_id)
+         VALUES ($1, $2, 'TestUser', 'Haircut', NOW(), 'confirmed', $3)`,
+        [d.b, CLIENT_A.id, cId]
       );
       await pool.query(
         `INSERT INTO follow_ups (id, booking_id, scheduled_time, sent)
@@ -224,16 +227,18 @@ describe('F6: Follow-up Cron Job E2E', () => {
   });
 
   test('TC-6.2.4: DB Outage during Cron Updates', async () => {
-    const bookingId = '880e8400-e29b-41d4-a716-446655440030';
-    await pool.query(
-      `INSERT INTO bookings (id, client_id, customer_name, service, date, status)
-       VALUES ($1, $2, 'Alice', 'Haircut', NOW(), 'confirmed')`,
-      [bookingId, CLIENT_A.id]
-    );
+    const convId = '770e8400-e29b-41d4-a716-446655440030';
     await pool.query(
       `INSERT INTO conversations (id, customer_phone_number, client_id, current_state, partial_booking_data, last_messaged_at)
        VALUES ($1, $2, $3, 'idle', '{}', NOW())`,
-      ['770e8400-e29b-41d4-a716-446655440030', '+12025550300', CLIENT_A.id]
+      [convId, '+12025550300', CLIENT_A.id]
+    );
+
+    const bookingId = '880e8400-e29b-41d4-a716-446655440030';
+    await pool.query(
+      `INSERT INTO bookings (id, client_id, customer_name, service, date, status, conversation_id)
+       VALUES ($1, $2, 'Alice', 'Haircut', NOW(), 'confirmed', $3)`,
+      [bookingId, CLIENT_A.id, convId]
     );
     await pool.query(
       `INSERT INTO follow_ups (id, booking_id, scheduled_time, sent)
@@ -269,16 +274,18 @@ describe('F6: Follow-up Cron Job E2E', () => {
   });
 
   test('TC-6.2.5: Client Token Deletion before Cron', async () => {
-    const bookingId = '880e8400-e29b-41d4-a716-446655440040';
-    await pool.query(
-      `INSERT INTO bookings (id, client_id, customer_name, service, date, status)
-       VALUES ($1, $2, 'Alice', 'Haircut', NOW(), 'confirmed')`,
-      [bookingId, CLIENT_A.id]
-    );
+    const convId = '770e8400-e29b-41d4-a716-446655440040';
     await pool.query(
       `INSERT INTO conversations (id, customer_phone_number, client_id, current_state, partial_booking_data, last_messaged_at)
        VALUES ($1, $2, $3, 'idle', '{}', NOW())`,
-      ['770e8400-e29b-41d4-a716-446655440040', '+12025550400', CLIENT_A.id]
+      [convId, '+12025550400', CLIENT_A.id]
+    );
+
+    const bookingId = '880e8400-e29b-41d4-a716-446655440040';
+    await pool.query(
+      `INSERT INTO bookings (id, client_id, customer_name, service, date, status, conversation_id)
+       VALUES ($1, $2, 'Alice', 'Haircut', NOW(), 'confirmed', $3)`,
+      [bookingId, CLIENT_A.id, convId]
     );
     await pool.query(
       `INSERT INTO follow_ups (id, booking_id, scheduled_time, sent)
