@@ -3,20 +3,26 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const isVertex = process.env.GEMINI_PLATFORM === 'vertex' || process.env.USE_VERTEX_AI === 'true';
+let aiClient: GoogleGenAI;
 
-export const ai = new GoogleGenAI(
-  isVertex
-    ? {
-        vertexai: true,
-        project: process.env.GCP_PROJECT || 'rznies2',
-        location: process.env.GCP_LOCATION || 'us-central1',
-        apiKey: process.env.GEMINI_API_KEY
-      }
-    : {
-        apiKey: process.env.GEMINI_API_KEY || 'DUMMY_KEY'
-      }
-);
+if (process.env.GCP_SERVICE_ACCOUNT_JSON) {
+  try {
+    const credentials = JSON.parse(process.env.GCP_SERVICE_ACCOUNT_JSON);
+    aiClient = new GoogleGenAI({
+      vertexai: true,
+      project: credentials.project_id || 'rznies2',
+      location: process.env.GCP_LOCATION || 'us-central1',
+      googleAuthOptions: { credentials }
+    });
+  } catch (err) {
+    console.error('Failed to parse GCP_SERVICE_ACCOUNT_JSON, falling back to API key:', err);
+    aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || 'DUMMY_KEY' });
+  }
+} else {
+  aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || 'DUMMY_KEY' });
+}
+
+export const ai = aiClient;
 
 const modelName = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
