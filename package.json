@@ -4,7 +4,7 @@
   "description": "Multi-tenant WhatsApp customer bot",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc && npm run build --prefix dashboard",
+    "build": "tsc && npm install --prefix dashboard && npm run build --prefix dashboard",
     "dev": "nodemon src/server.ts",
     "test": "vitest run",
     "start": "node dist/server.js"
